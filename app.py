@@ -1,155 +1,228 @@
-
 import streamlit as st
+from datetime import datetime
 
-st.set_page_config(page_title="Umai Sushi - Sistema de Comandas", layout="centered")
-st.title("🍣 Sistema de Comandas - Umai Sushi")
+# Configuração de Layout e Tema Escuro/Dourado
+st.set_page_config(page_title="Umai Sushi Premium - PDV", layout="centered")
 
-# CARDÁPIO REAL EXTRAÍDO DA SUA FOTO
-CARDAPIO = {
-    "Selecione um produto...": {"preco": 0.00, "categoria": "Status"},
+# CSS Customizado - Identidade Visual Umai Premium (Preto, Grafite e Dourado)
+st.markdown("""
+    <style>
+    /* Fundo geral e textos */
+    .stApp {
+        background-color: #0d0d0d;
+        color: #e5e5e5;
+    }
+    /* Cards de informação */
+    .metric-box {
+        background-color: #1a1a1a;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #d4af37;
+        margin-bottom: 15px;
+    }
+    /* Caixa de Total Estilo PDV G6 Premium */
+    .total-box {
+        background-color: #1a1a1a;
+        color: #d4af37;
+        padding: 20px;
+        border-radius: 8px;
+        border: 2px solid #d4af37;
+        text-align: center;
+        font-size: 26px;
+        font-weight: bold;
+        margin-top: 15px;
+        box-shadow: 0px 0px 10px rgba(212, 175, 55, 0.2);
+    }
+    /* Estilização de botões do Streamlit */
+    div.stButton > button:first-child {
+        background-color: #d4af37 !important;
+        color: #0d0d0d !important;
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 5px !important;
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #f3e5ab !important;
+        transform: scale(1.02);
+    }
+    /* Inputs e caixas de seleção */
+    .stSelectbox, .stTextInput, .stNumberInput {
+        color: white !important;
+    }
+    </style>
+""", unsafe_allowed_html=True)
+
+# Inicialização do Banco de Dados em Memória Temporária (Enquanto estruturamos o Supabase)
+if 'cardapio' not in st.session_state:
+    st.session_state.cardapio = {
+        "Carpaccio de Salmão (15 un)": {"preco": 39.00, "categoria": "À La Carte"},
+        "Carpaccio de Tilápia (15 un)": {"preco": 35.00, "categoria": "À La Carte"},
+        "Yakissoba de Carne (500g)": {"preco": 32.00, "categoria": "À La Carte"},
+        "Temaki de Salmão com Arroz (1 un)": {"preco": 26.00, "categoria": "Temakis"},
+        "Box 16 Peças": {"preco": 48.00, "categoria": "Boxes"},
+        "Box 26 Peças": {"preco": 78.00, "categoria": "Boxes"},
+        "Coca-Cola (310ml)": {"preco": 6.50, "categoria": "Bebidas"},
+        "Heineken (330ml)": {"preco": 10.00, "categoria": "Bebidas"}
+    }
+
+if 'mesas_ativas' not in st.session_state:
+    st.session_state.mesas_ativas = {}
+
+# Menu Superior para navegação entre telas do sistema
+aba = st.radio("Navegação", ["🛒 Lançar Comanda", "🖥️ Painel Caixa (Computador)", "⚙️ Gerenciar Cardápio"], horizontal=True)
+
+# ----------------------------------------------------
+# ABA 1: LANÇAMENTO (Para os Celulares dos Garçons)
+# ----------------------------------------------------
+if aba == "🛒 Lançar Comanda":
+    st.markdown("<h2 style='color: #d4af37;'>🛒 Nova Venda / Comanda</h2>", unsafe_allowed_html=True)
     
-    # À LA CARTE
-    "Carpaccio de Salmão (15 un)": {"preco": 39.00, "categoria": "À La Carte"},
-    "Carpaccio de Tilápia (15 un)": {"preco": 35.00, "categoria": "À La Carte"},
-    "Tataki de Salmão (250g)": {"preco": 36.00, "categoria": "À La Carte"},
-    "Tataki de Tilápia (250g)": {"preco": 32.00, "categoria": "À La Carte"},
-    "Salmão Frito (6 un)": {"preco": 40.00, "categoria": "À La Carte"},
-    "Camarão Frito (15 un)": {"preco": 29.00, "categoria": "À La Carte"},
-    "Guioza (8 un)": {"preco": 34.00, "categoria": "À La Carte"},
-    "Ceviche de Tilápia c/ Abacaxi (400g)": {"preco": 32.00, "categoria": "À La Carte"},
-    "Ceviche de Salmão (250g)": {"preco": 36.00, "categoria": "À La Carte"},
-    "Yakissoba de Carne (500g)": {"preco": 32.00, "categoria": "À La Carte"},
-    "Yakissoba de Frango (500g)": {"preco": 28.00, "categoria": "À La Carte"},
-    "Yakissoba de Camarão (500g)": {"preco": 36.00, "categoria": "À La Carte"},
-    "Harumaki de Queijo (6 un)": {"preco": 30.00, "categoria": "À La Carte"},
-    "Harumaki de Camarão (6 un)": {"preco": 30.00, "categoria": "À La Carte"},
-    "Robatade Camarão com Queijo Coalho": {"preco": 36.00, "categoria": "À La Carte"},
-    "Shimeji (200g)": {"preco": 33.00, "categoria": "À La Carte"},
-    
-    # TEMAKIS
-    "Temaki de Salmão com Arroz (1 un)": {"preco": 26.00, "categoria": "Temakis"},
-    "Temaki Temperado de Camarão (1 un)": {"preco": 29.00, "categoria": "Temakis"},
-    "Temaki Frito de Salmão (1 un)": {"preco": 30.00, "categoria": "Temakis"},
-    "Temaki Frito de Camarão (1 un)": {"preco": 33.00, "categoria": "Temakis"},
-    "Hot Philadelphia de Salmão (8 un)": {"preco": 32.00, "categoria": "Temakis"},
-    "Hot de Camarão com Arroz (8 un)": {"preco": 36.00, "categoria": "Temakis"},
-    
-    # JOYS / SASHIMIS / NIGUIRIS
-    "Joy com Cream Cheese (8 un)": {"preco": 32.00, "categoria": "Joys/Sashimis"},
-    "Joy de Camarão (8 un)": {"preco": 39.00, "categoria": "Joys/Sashimis"},
-    "Shakemaki (8 un)": {"preco": 39.00, "categoria": "Joys/Sashimis"},
-    "Sashimi de Salmão (5 Lâminas)": {"preco": 30.00, "categoria": "Joys/Sashimis"},
-    "Sashimi de Tilápia (5 Lâminas)": {"preco": 30.00, "categoria": "Joys/Sashimis"},
-    "Niguiri de Salmão (4 un)": {"preco": 24.00, "categoria": "Joys/Sashimis"},
-    "Niguiri de Camarão (4 un)": {"preco": 24.00, "categoria": "Joys/Sashimis"},
-    
-    # BOXES
-    "Box 16 Peças": {"preco": 48.00, "categoria": "Boxes"},
-    "Box 26 Peças": {"preco": 78.00, "categoria": "Boxes"},
-    
-    # BEBIDAS / SOBREMESAS
-    "Coca-Cola (310ml)": {"preco": 6.50, "categoria": "Bebidas/Sobremesas"},
-    "Coca-Cola Zero (310ml)": {"preco": 6.50, "categoria": "Bebidas/Sobremesas"},
-    "Água Tônica (350ml)": {"preco": 5.50, "categoria": "Bebidas/Sobremesas"},
-    "Água Sem Gás (500ml)": {"preco": 5.00, "categoria": "Bebidas/Sobremesas"},
-    "Água Com Gás (500ml)": {"preco": 6.50, "categoria": "Bebidas/Sobremesas"},
-    "Heineken (330ml)": {"preco": 10.00, "categoria": "Bebidas/Sobremesas"},
-    "Heineken Zero (330ml)": {"preco": 10.00, "categoria": "Bebidas/Sobremesas"},
-    "Harumaki Doce de Leite (1 un)": {"preco": 6.00, "categoria": "Bebidas/Sobremesas"},
-    "Harumaki Beijinho (1 un)": {"preco": 6.00, "categoria": "Bebidas/Sobremesas"},
-    
-    # OUTROS
-    "Item Personalizado (Digitar valor)": {"preco": 0.00, "categoria": "Outros"}
-}
-
-if 'itens_comanda' not in st.session_state:
-    st.session_state.itens_comanda = []
-
-# Identificação na Barra Lateral
-st.sidebar.header("📋 Dados de Identificação")
-
-garcom = st.sidebar.selectbox(
-    "Selecione o Garçom", 
-    ["Selecione...", "Lucas", "Paula", "Rosana", "Pedido sem Garçom (Não cobrar taxa)"]
-)
-
-mesa = st.sidebar.text_input("Número da Mesa", placeholder="Ex: 05")
-cliente = st.sidebar.text_input("Nome do Cliente", placeholder="Ex: João Silva")
-
-st.subheader("🛒 Lançar Item na Comanda")
-
-# Filtro por Categoria
-categorias_disponiveis = ["Todos"] + sorted(list(set(info["categoria"] for info in CARDAPIO.values() if info["categoria"] != "Status")))
-categoria_selecionada = st.selectbox("Filtrar por Categoria", categorias_disponiveis)
-
-if categoria_selecionada == "Todos":
-    itens_filtrados = list(CARDAPIO.keys())
-else:
-    itens_filtrados = ["Selecione um produto..."] + [item for item, info in CARDAPIO.items() if info["categoria"] == categoria_selecionada]
-
-col1, col2, col3 = st.columns([2, 1, 1])
-
-with col1:
-    produto_selecionado = st.selectbox("Escolha o Produto", itens_filtrados)
-
-with col3:
-    preco_sugerido = CARDAPIO[produto_selecionado]["preco"] if produto_selecionado in CARDAPIO else 0.00
-    valor_unitario = st.number_input("Preço Unitário (R$)", min_value=0.0, value=preco_sugerido, step=0.50, format="%.2f")
-
-with col2:
-    quantidade = st.number_input("Quantidade", min_value=1, value=1, step=1)
-
-if produto_selecionado == "Item Personalizado (Digitar valor)":
-    item_final = st.text_input("Nome do item personalizado:", placeholder="Ex: Adicional de Shoyu Especial")
-else:
-    item_final = produto_selecionado
-
-if st.button("Adicionar Item", use_container_width=True):
-    if garcom == "Selecione...":
-        st.error("Selecione o garçom ou a opção de 'Pedido sem Garçom' na barra lateral.")
-    elif produto_selecionado != "Selecione um produto..." and valor_unitario > 0:
-        subtotal_item = quantidade * valor_unitario
-        st.session_state.itens_comanda.append({
-            "item": item_final,
-            "qtd": quantidade,
-            "valor": valor_unitario,
-            "subtotal": subtotal_item
-        })
-        st.toast(f"{item_final} adicionado!")
-    else:
-        st.warning("Selecione um produto válido.")
-
-st.divider()
-st.subheader("🧾 Resumo da Comanda")
-
-if st.session_state.itens_comanda:
-    st.write(f"**Atendimento:** {garcom}")
-    if mesa: st.write(f"**Mesa:** {mesa}")
-    if cliente: st.write(f"**Cliente:** {cliente}")
-    
-    st.write("---")
-    valor_produtos = 0.0
-    for idx, i in enumerate(st.session_state.itens_comanda):
-        st.write(f"{i['qtd']}x — {i['item']} — R$ {i['valor']:.2f} | **Subtotal: R$ {i['subtotal']:.2f}**")
-        valor_produtos += i['subtotal']
-    
-    st.divider()
-    
-    # Zera taxa caso seja pedido sem garçom
-    if garcom == "Pedido sem Garçom (Não cobrar taxa)":
-        taxa_servico_percentual = 0.0
-    else:
-        taxa_servico_percentual = 10.0
+    c1, c2 = st.columns(2)
+    with c1:
+        garcom = st.selectbox("Garçom", ["Selecione...", "Lucas", "Paula", "Rosana", "Pedido sem Garçom"])
+    with c2:
+        num_mesa = st.text_input("Nº Mesa / Cartão", placeholder="Ex: 05")
         
-    valor_taxa_servico = valor_produtos * (taxa_servico_percentual / 100.0)
-    valor_total_geral = valor_produtos + valor_taxa_servico
+    cliente = st.text_input("Cliente (Opcional)")
 
-    st.write(f"**Subtotal dos Produtos:** R$ {valor_produtos:.2f}")
-    st.write(f"**Taxa de Serviço ({taxa_servico_percentual}%):** R$ {valor_taxa_servico:.2f}")
-    st.success(f"### **Total Geral a Pagar:** R$ {valor_total_geral:.2f}")
+    st.divider()
+
+    # Filtro e Seleção do Produto
+    categorias = ["Todos"] + sorted(list(set(info["categoria"] for info in st.session_state.cardapio.values())))
+    cat_sel = st.selectbox("Categoria", categorias)
     
-    if st.button("Limpar Comanda", type="secondary"):
-        st.session_state.itens_comanda = []
-        st.rerun()
-else:
-    st.info("Nenhum item lançado.")
+    if cat_sel == "Todos":
+        produtos_f = list(st.session_state.cardapio.keys())
+    else:
+        produtos_f = [p for p, info in st.session_state.cardapio.items() if info["categoria"] == cat_sel]
+        
+    prod_sel = st.selectbox("Produto", ["Selecione..."] + produtos_f)
+    
+    cq, cp = st.columns(2)
+    with cq:
+        qtd = st.number_input("Quantidade", min_value=1, value=1)
+    with cp:
+        preco_base = st.session_state.cardapio[prod_sel]["preco"] if prod_sel != "Selecione..." else 0.0
+        preco_un = st.number_input("Preço (R$)", min_value=0.0, value=preco_base, format="%.2f")
+
+    if st.button("➕ ADICIONAR ITEM À MESA", use_container_width=True):
+        if garcom == "Selecione..." or not num_mesa:
+            st.error("Identifique o Garçom e o número da Mesa.")
+        elif prod_sel == "Selecione...":
+            st.warning("Escolha um produto válido.")
+        else:
+            # Inicializa a mesa caso não exista
+            if num_mesa not in st.session_state.mesas_ativas:
+                st.session_state.mesas_ativas[num_mesa] = {"garcom": garcom, "cliente": cliente, "itens": []}
+            
+            st.session_state.mesas_ativas[num_mesa]["itens"].append({
+                "produto": prod_sel,
+                "qtd": qtd,
+                "preco": preco_un,
+                "subtotal": qtd * preco_un
+            })
+            st.toast(f"{prod_sel} adicionado à Mesa {num_mesa}!")
+
+# ----------------------------------------------------
+# ABA 2: CAIXA E IMPRESSÃO (Para o Computador)
+# ----------------------------------------------------
+elif aba == "🖥️ Painel Caixa (Computador)":
+    st.markdown("<h2 style='color: #d4af37;'>🖥️ Monitor de Mesas e Impressão</h2>", unsafe_allowed_html=True)
+    
+    if not st.session_state.mesas_ativas:
+        st.info("Nenhuma mesa com consumo em aberto no momento.")
+    else:
+        mesa_foco = st.selectbox("Escolha a Mesa para Fechamento/Impressão", list(st.session_state.mesas_ativas.keys()))
+        
+        dados = st.session_state.mesas_ativas[mesa_foco]
+        
+        st.markdown(f"""
+        <div class='metric-box'>
+            <strong>Mesa:</strong> {mesa_foco} | <strong>Atendente:</strong> {dados['garcom']}<br>
+            <strong>Cliente:</strong> {dados['cliente'] if dados['cliente'] else 'Não Informado'}
+        </div>
+        """, unsafe_allowed_html=True)
+        
+        total_itens = 0.0
+        for item in dados["itens"]:
+            st.write(f"▪️ {item['qtd']}x {item['produto']} — R$ {item['preco']:.2f} | **R$ {item['subtotal']:.2f}**")
+            total_itens += item["subtotal"]
+            
+        taxa = 0.0 if dados["garcom"] == "Pedido sem Garçom" else total_itens * 0.10
+        total_geral = total_itens + taxa
+        
+        st.markdown(f"""
+            <div class='total-box'>
+                SUBTOTAL: R$ {total_itens:.2f}<br>
+                TAXA (10%): R$ {taxa:.2f}<br>
+                TOTAL GERAL: R$ {total_geral:.2f}
+            </div>
+        """, unsafe_allowed_html=True)
+        
+        # Sistema de Impressão Térmica via Navegador (Otimizado para 80mm)
+        cupom_html = f"""
+        <html>
+        <head>
+            <style>
+                @page {{ size: 80mm auto; margin: 0; }}
+                body {{ font-family: 'Courier New', Courier, monospace; width: 72mm; font-size: 12px; padding: 5px; background: white; color: black; }}
+                .text-center {{ text-align: center; }}
+                .bold {{ font-weight: bold; }}
+                .line {{ border-top: 1px dashed #000; margin: 5px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="text-center bold" style="font-size: 16px;">UMAI SUSHI PREMIUM</div>
+            <div class="text-center">Comanda Eletrônica de Consumo</div>
+            <div class="line"></div>
+            <div><strong>MESA:</strong> {mesa_foco}</div>
+            <div><strong>ATENDENTE:</strong> {dados['garcom']}</div>
+            <div><strong>DATA:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
+            <div class="line"></div>
+            <div class="bold">ITENS LANÇADOS:</div>
+        """
+        for item in dados["itens"]:
+            cupom_html += f"<div>{item['qtd']}x {item['produto']}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R$ {item['subtotal']:.2f}</div>"
+            
+        cupom_html += f"""
+            <div class="line"></div>
+            <div>SUBTOTAL: R$ {total_itens:.2f}</div>
+            <div>TAXA SERV.: R$ {taxa:.2f}</div>
+            <div class="bold" style="font-size: 14px;">TOTAL: R$ {total_geral:.2f}</div>
+            <div class="line"></div>
+            <div class="text-center bold">OBRIGADO PELA PREFERÊNCIA!</div>
+            <script>window.print();</script>
+        </body>
+        </html>
+        """
+        
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            st.download_button("🖨️ DISPARAR IMPRESSÃO", data=cupom_html, file_name=f"comanda_{mesa_foco}.html", mime="text/html")
+        with col_b2:
+            if st.button("✅ FINALIZAR E PAGAR MESA", type="secondary"):
+                del st.session_state.mesas_ativas[mesa_foco]
+                st.rerun()
+
+# ----------------------------------------------------
+# ABA 3: ADMINISTRAÇÃO (Alterar Preços na Hora)
+# ----------------------------------------------------
+elif aba == "⚙️ Gerenciar Cardápio":
+    st.markdown("<h2 style='color: #d4af37;'>⚙️ Painel de Controle de Itens</h2>", unsafe_allowed_html=True)
+    
+    st.write("### Adicionar ou Alterar Preço de Produto")
+    nome_p = st.text_input("Nome do Produto")
+    cat_p = st.selectbox("Categoria do Produto", ["À La Carte", "Temakis", "Boxes", "Bebidas", "Sobremesas", "Outros"])
+    preco_p = st.number_input("Preço de Venda (R$)", min_value=0.0, value=0.0, format="%.2f")
+    
+    if st.button("💾 SALVAR PRODUTO NO CARDÁPIO"):
+        if nome_p:
+            st.session_state.cardapio[nome_p] = {"preco": preco_p, "categoria": cat_p}
+            st.success(f"Produto '{nome_p}' salvo com sucesso!")
+            st.rerun()
+            
+    st.write("---")
+    st.write("### Itens Cadastrados Atualmente")
+    for prod, info in st.session_state.cardapio.items():
+        st.write(f"🔸 **{prod}** ({info['categoria']}) — R$ {info['preco']:.2f}")
