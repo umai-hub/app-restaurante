@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import datetime
 
 st.set_page_config(page_title="Umai Sushi - Sistema de Comandas", layout="centered")
 st.title("🍣 Sistema de Comandas - Umai Sushi")
@@ -125,7 +126,59 @@ if st.session_state.itens_comanda:
     st.write(f"**Taxa de Serviço ({taxa_servico_percentual}%):** R$ {valor_taxa_servico:.2f}")
     st.success(f"### **Total Geral a Pagar:** R$ {valor_total_geral:.2f}")
     
-    if st.button("Limpar Comanda", type="secondary"):
+    # ----------------------------------------------------
+    # MOTOR DE GERAÇÃO E IMPRESSÃO DA COMANDA TÉRMICA
+    # ----------------------------------------------------
+    # Monta o cupom formatado milimetricamente para impressoras de 80mm/58mm
+    html_cupom = f"""
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            @page {{ size: 80mm auto; margin: 0; }}
+            body {{ font-family: 'Courier New', monospace; width: 72mm; font-size: 12px; color: #000; padding: 10px; margin: 0; }}
+            .txt-centro {{ text-align: center; font-weight: bold; font-size: 14px; }}
+            .linha {{ border-top: 1px dashed #000; margin: 8px 0; }}
+            .item-linha {{ margin-bottom: 5px; font-size: 11px; }}
+        </style>
+    </head>
+    <body onload="window.print();">
+        <div class="txt-centro">UMAI SUSHI</div>
+        <div class="txt-centro">*** COMANDA DE PEDIDO ***</div>
+        <div class="linha"></div>
+        <div><b>MESA:</b> {mesa if mesa else 'N/A'}</div>
+        <div><b>ATENDENTE:</b> {garçom}</div>
+        <div><b>CLIENTE:</b> {cliente if cliente else 'Não informado'}</div>
+        <div><b>DATA/HORA:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
+        <div class="linha"></div>
+    """
+    
+    for item in st.session_state.itens_comanda:
+        html_cupom += f'<div class="item-linha">{item["qtd"]}x {item["item"]}<br>&nbsp;&nbsp;-> Subtotal: R$ {item["subtotal"]:.2f}</div>'
+        
+    html_cupom += f"""
+        <div class="line" style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+        <div>SUBTOTAL PROD: R$ {valor_produtos:.2f}</div>
+        <div>TAXA SERV ({taxa_servico_percentual}%): R$ {valor_taxa_servico:.2f}</div>
+        <div style="font-weight: bold; font-size: 13px; margin-top: 5px;">TOTAL GERAL: R$ {valor_total_geral:.2f}</div>
+        <div class="line" style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+        <div style="text-align: center; font-style: italic;">Umai Sushi Premium</div>
+    </body>
+    </html>
+    """
+    
+    st.write("")
+    # O download_button emite o documento HTML que executa automaticamente o comando de impressão do Wi-Fi do tablet
+    st.download_button(
+        label="🖨️ ENVIAR COMANDÃO PARA IMPRESSORA DE REDE",
+        data=html_cupom,
+        file_name=f"comanda_mesa_{mesa if mesa else 'balcao'}.html",
+        mime="text/html",
+        use_container_width=True
+    )
+    
+    st.write("")
+    if st.button("Limpar Comanda", type="secondary", use_container_width=True):
         st.session_state.itens_comanda = []
         st.rerun()
 else:
