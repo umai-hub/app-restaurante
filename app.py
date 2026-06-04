@@ -126,10 +126,7 @@ if st.session_state.itens_comanda:
     st.write(f"**Taxa de Serviço ({taxa_servico_percentual}%):** R$ {valor_taxa_servico:.2f}")
     st.success(f"### **Total Geral a Pagar:** R$ {valor_total_geral:.2f}")
     
-    # ----------------------------------------------------
-    # MOTOR DE GERAÇÃO E IMPRESSÃO DA COMANDA TÉRMICA
-    # ----------------------------------------------------
-    # Monta o cupom formatado milimetricamente para impressoras de 80mm/58mm
+    # HTML formatado para bobina térmica padrão de rede (80mm ou 58mm)
     html_cupom = f"""
     <html>
     <head>
@@ -168,7 +165,7 @@ if st.session_state.itens_comanda:
     """
     
     st.write("")
-    # O download_button emite o documento HTML que executa automaticamente o comando de impressão do Wi-Fi do tablet
+    # Emite o documento HTML que dispara a janela de impressão nativa do Tablet/PC
     st.download_button(
         label="🖨️ ENVIAR COMANDÃO PARA IMPRESSORA DE REDE",
         data=html_cupom,
